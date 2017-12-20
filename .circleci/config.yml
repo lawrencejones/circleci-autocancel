@@ -1,13 +1,14 @@
 ---
 version: 2
 jobs:
+  docker:
+    - image: ubuntu:16.04
   sleep:
-    - run:
-        name: Sleep for some time
-        command: sleep 1 && echo done
+    - checkout
+    - run: echo done
 
 workflows:
   version: 2
-  pipeline:
+  build:
     jobs:
       - sleep
