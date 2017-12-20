@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+set -euf -o pipefail
+
+if [[ "${1:-"<no-arg>"}" != "--force" ]]; then
+  echo """
+  Desc:  Cancels CircleCI builds for previous commits on same branch
+  Usage: cancel-previous-builds --force
+  Examples...
+
+      # Cancels builds for commits in same branch
+      cancel-previous-builds --force
+
+  """
+
+  exit 255
+fi
+
+# circleci <curl-args...> <path>
+function circleci() {
+  curl --silent \
+    -H "Content-Type: application/json" \
+    -u "${CIRCLECI_TOKEN}:" \
+    "${@:1:${#}-1}" \
+    "https://circleci.com/api/v1.1${@:${#@}}"
+}
+
+USERNAME="${CIRCLE_PROJECT_USERNAME:-"<missing-username>"}"
+REPO="${CIRCLE_PROJECT_REPONAME:-"<missing>"}"
+PROJECT="${USERNAME}/${REPO}"
+CIRCLE_SHA1="${CIRCLE_SHA1:-"<missing-circle-sha1>"}"
+ENCODED_BRANCH="$(jq -Rr @uri <<< "${CIRCLE_BRANCH}")"  # urlsafe branchname
+
+circleci --get \
+  --data-urlencode "limit=100" \
+  --data-urlencode "filter=running" \
+  "/project/github/${PROJECT}/tree/${ENCODED_BRANCH}" \
+  | jq "map(select(.vcs_revision != \"${CIRCLE_SHA1}\"))" \
+  | jq "map(.build_num) | .[]" -r \
+  | while read -r BUILD_NUM; do
+      STATUS=$( \
+        circleci -s -o /dev/null -w '%{http_code}' -X POST \
+          "/project/github/${PROJECT}/${BUILD_NUM}/cancel"
+      )
+      echo -e "Cancelled build ${BUILD_NUM}:\t${STATUS}"
+    done
+
+exit 0
