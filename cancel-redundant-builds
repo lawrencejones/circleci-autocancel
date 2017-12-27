@@ -29,6 +29,7 @@ USERNAME="${CIRCLE_PROJECT_USERNAME:-"<missing-username>"}"
 REPO="${CIRCLE_PROJECT_REPONAME:-"<missing>"}"
 PROJECT="${USERNAME}/${REPO}"
 CIRCLE_SHA1="${CIRCLE_SHA1:-"<missing-circle-sha1>"}"
+CIRCLE_BUILD_NUM="${CIRCLE_BUILD_NUM:-"<missing-circle-build-num>"}"
 ENCODED_BRANCH="$(jq -Rr @uri <<< "${CIRCLE_BRANCH}")"  # urlsafe branchname
 
 circleci --get \
@@ -36,6 +37,7 @@ circleci --get \
   --data-urlencode "filter=running" \
   "/project/github/${PROJECT}/tree/${ENCODED_BRANCH}" \
   | jq "map(select(.vcs_revision != \"${CIRCLE_SHA1}\"))" \
+  | jq "map(select(.build_num < ${CIRCLE_BUILD_NUM}))" \
   | jq "map(.build_num) | .[]" -r \
   | while read -r BUILD_NUM; do
       STATUS=$( \
