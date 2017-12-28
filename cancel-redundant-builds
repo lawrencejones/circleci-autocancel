@@ -36,7 +36,7 @@ circleci --get \
   "/project/github/${PROJECT}/tree/${ENCODED_BRANCH}" \
   | jq "max_by(.build_num).vcs_revision as \$maxSha | map(select(.vcs_revision != \$maxSha))" \
   | jq "map(select(.lifecycle | test(\"running|queued|scheduled\")))" \
-  | jq "map(select(.build_num != ${CIRCLE_BUILD_NUM}))" \
+  | jq "sort_by(.build_num == ${CIRCLE_BUILD_NUM})" \
   | jq "map(.build_num) | .[]" -r \
   | while read -r BUILD_NUM; do
       STATUS=$( \
