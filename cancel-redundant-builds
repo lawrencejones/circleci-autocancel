@@ -31,6 +31,11 @@ PROJECT="${USERNAME}/${REPO}"
 CIRCLE_BUILD_NUM="${CIRCLE_BUILD_NUM:-"<missing-circle-build-num>"}"
 ENCODED_BRANCH="$(jq -Rr @uri <<< "${CIRCLE_BRANCH}")"  # urlsafe branchname
 
+if [ "${CIRCLE_BRANCH}" = "master" ]; then
+  echo "Not running on master branch"
+  exit 0
+fi
+
 circleci --get \
   --data-urlencode "limit=100" \
   "/project/github/${PROJECT}/tree/${ENCODED_BRANCH}" \
